@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "mattn/postgres"
+
+// Values
+pub fn affected_rows(QueryResult) -> Int
+
+pub fn close(Connection) -> Unit
+
+pub fn columns(QueryResult) -> Array[String]
+
+pub fn connect(ConnectConfig) -> Result[Connection, PgError]
+
+pub fn free_result(QueryResult) -> Unit
+
+pub fn query(Connection, String) -> Result[QueryResult, PgError]
+
+pub fn rows(QueryResult) -> Array[Array[String]]
+
+// Errors
+
+// Types and methods
+pub struct ConnectConfig {
+  host : String
+  port : Int
+  database : String
+  user : String
+  password : String
+}
+
+type Connection
+
+pub enum PgError {
+  ConnectionError(String)
+  AuthError(String)
+  QueryError(String)
+  ProtocolError(String)
+}
+
+type QueryResult
+
+// Type aliases
+
+// Traits
+

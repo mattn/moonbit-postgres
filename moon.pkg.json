@@ -1,0 +1,15 @@
+{
+  "is-main": false,
+  "supported-targets": ["native"],
+  "targets": {
+    "postgres.mbt": ["native"],
+    "postgres_c.c": ["native"]
+  },
+  "native-stub": ["postgres_c.c"],
+  "link": {
+    "native": {
+      "cc-flags": "-I/usr/include/postgresql",
+      "cc-link-flags": "-lpq"
+    }
+  }
+}
