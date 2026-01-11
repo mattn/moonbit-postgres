@@ -11,16 +11,28 @@ A PostgreSQL client library for MoonBit using libpq.
 
 ## Usage
 
+Add `cc-link-flags: "-lpq"` to your `moon.pkg.json`:
+
+```json
+{
+  "link": {
+    "native": {
+      "cc-link-flags": "-lpq"
+    }
+  }
+}
+```
+
 ```moonbit
 use postgres
 
-let config = postgres::ConnectConfig::{
-  host: "localhost",
-  port: 5432,
-  database: "mydb",
-  user: "postgres",
-  password: "password"
-}
+let config = postgres::ConnectConfig::new(
+  "localhost",
+  5432,
+  "mydb",
+  "postgres",
+  "password"
+)
 
 match postgres::connect(config) {
   Ok(conn) => {
@@ -60,15 +72,162 @@ moon build --target native
 
 ## API Reference
 
-### `ConnectConfig`
+### Connection Methods
 
-Configuration struct for PostgreSQL connection.
+#### `conn.close() -> Unit`
 
-- `host: String` - Database host
-- `port: Int` - Database port (default 5432)
-- `database: String` - Database name
-- `user: String` - Database user
-- `password: String` - Database password
+Close the database connection.
+
+#### `conn.query(sql: String) -> Result[QueryResult, PgError]`
+
+Execute a SQL query and return result.
+
+#### `conn.execute(sql: String, params: Array[Value]) -> Result[QueryResult, PgError]`
+
+Execute a SQL query with parameters. Parameters are automatically substituted for placeholders like `$1`, `$2`, etc.
+
+```moonbit
+// Example: parameterized query with automatic substitution
+let rows = conn.execute_and_fetch(
+  "SELECT * FROM users WHERE id = $1 AND name = $2",
+  [@postgres.Value::Int(123), postgres.Value::String("John")]
+)
+```
+
+**Security Note**: `execute()` with parameters is more secure than manual string concatenation, but for production use, prefer `prepare()` + `execute_prepared()` for better performance and proper parameter binding.
+
+#### `conn.query_and_fetch(sql: String) -> Result[Array[Array[String]], PgError]`
+
+Execute a query and automatically fetch rows, then free the result.
+
+```moonbit
+let rows = conn.query_and_fetch("SELECT * FROM users")
+```
+
+#### `conn.execute_and_fetch(sql: String, params: Array[Value]) -> Result[Array[Array[String]], PgError]`
+
+Execute a parameterized query, fetch rows, and automatically free the result.
+
+#### `conn.prepare(name: String, sql: String) -> Result[PreparedStatement, PgError]`
+
+Prepare a statement for repeated execution.
+
+```moonbit
+// Prepare a statement for repeated execution
+let stmt = conn.prepare("get_user", "SELECT * FROM users WHERE id = $1")?
+match stmt {
+  Ok(prepared) => {
+    // Execute with different parameters multiple times
+    let rows1 = prepared.execute_and_fetch([@postgres.Value::Int(1)])
+    let rows2 = prepared.execute_and_fetch([@postgres.Value::Int(2)])
+    prepared.close()
+  }
+  Err(e) => { /* handle error */ }
+}
+```
+
+### QueryResult Methods
+
+#### `result.rows() -> Array[Array[String]]`
+
+Get all rows from a query result as arrays of string values.
+
+#### `result.columns() -> Array[String]`
+
+Get column names from a query result.
+
+#### `result.affected_rows() -> Int`
+
+Get number of rows affected by INSERT/UPDATE/DELETE operations.
+
+#### `result.free() -> Unit`
+
+Free memory allocated for a query result.
+
+### PreparedStatement Methods
+
+#### `stmt.execute(params: Array[Value]) -> Result[QueryResult, PgError]`
+
+Execute a prepared statement with parameters.
+
+#### `stmt.execute_and_fetch(params: Array[Value]) -> Result[Array[Array[String]], PgError]`
+
+Execute a prepared statement, fetch rows, and automatically free the result.
+
+```moonbit
+let rows = stmt.execute_and_fetch([@postgres.Value::Int(123)])
+```
+
+#### `stmt.close() -> Unit`
+
+Close and free a prepared statement.
+
+### `Value` Enum
+
+Represents parameter values. MoonBit doesn't have an `any` type, so this enum serves a similar purpose, providing type-safe way to represent different PostgreSQL value types.
+
+- `Null` - NULL value
+- `Bool(Bool)` - Boolean value
+- `Int(Int)` - Integer value
+- `Int64(Int64)` - 64-bit integer value
+- `Float(Float)` - Floating point value
+- `String(String)` - String value
+- `Bytes(Bytes)` - Binary data
+
+**Type Safety**: Unlike dynamic `any` types, the `Value` enum ensures type safety through pattern matching. You must explicitly specify which type of value you're passing, which catches errors at compile time rather than runtime.
+
+### Usage Examples
+
+#### Simple Query
+
+```moonbit
+let conn = @postgres.connect("postgresql://user:pass@localhost/db")?
+match conn.query_and_fetch("SELECT * FROM users") {
+  Ok(rows) => {
+    // Process rows...
+  }
+  Err(e) => {
+    println("Query error: " + @postgres.PgError::to_string(e))
+  }
+}
+```
+
+#### Parameterized Query (Simple)
+
+```moonbit
+let conn = @postgres.connect("postgresql://user:pass@localhost/db")?
+match conn.execute_and_fetch(
+  "SELECT * FROM users WHERE id = $1",
+  [@postgres.Value::Int(123)]
+) {
+  Ok(rows) => {
+    // Process rows...
+  }
+  Err(e) => {
+    println("Query error: " + @postgres.PgError::to_string(e))
+  }
+}
+```
+
+#### Prepared Statement (Recommended for Performance)
+
+```moonbit
+let conn = @postgres.connect("postgresql://user:pass@localhost/db")?
+let stmt = conn.prepare("get_user", "SELECT * FROM users WHERE id = $1")?
+match stmt {
+  Ok(prepared) => {
+    // Execute multiple times efficiently
+    let rows1 = prepared.execute_and_fetch([@postgres.Value::Int(1)])
+    let rows2 = prepared.execute_and_fetch([@postgres.Value::Int(2)])
+    let rows3 = prepared.execute_and_fetch([@postgres.Value::Int(3)])
+    prepared.close()
+  }
+  Err(e) => {
+    println("Prepare error: " + @postgres.PgError::to_string(e))
+  }
+}
+conn.close()
+```
 
 ### `PgError`
 
