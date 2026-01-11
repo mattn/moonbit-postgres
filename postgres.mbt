@@ -42,18 +42,43 @@ pub fn PgError::to_string(self : PgError) -> String {
 }
 
 ///|
-pub fn from_int(n : Int) -> Value {
-  Int(n)
+pub trait ToValue {
+  to_value(Self) -> Value
 }
 
 ///|
-pub fn from_string(s : String) -> Value {
-  String(s)
+pub impl ToValue for Int with to_value(n) {
+  Value::Int(n)
 }
 
 ///|
-pub fn from_bool(b : Bool) -> Value {
-  Bool(b)
+pub impl ToValue for String with to_value(s) {
+  Value::String(s)
+}
+
+///|
+pub impl ToValue for Bool with to_value(b) {
+  Value::Bool(b)
+}
+
+///|
+pub impl ToValue for Int64 with to_value(n) {
+  Value::Int64(n)
+}
+
+///|
+pub impl ToValue for Float with to_value(f) {
+  Value::Float(f)
+}
+
+///|
+pub impl ToValue for Bytes with to_value(b) {
+  Value::Bytes(b)
+}
+
+///|
+pub impl ToValue for Value with to_value(v) {
+  v
 }
 
 ///|
@@ -99,13 +124,19 @@ pub fn Connection::query(
 }
 
 ///|
-pub fn Connection::execute(
+pub fn[T : ToValue] Connection::execute(
   self : Connection,
   sql : String,
-  params : Array[Value],
+  params : Array[T],
 ) -> Result[QueryResult, PgError] {
-  let param_count = params.length()
-  let result = pg_execute_internal(self, string_to_c_bytes(sql), params, param_count)
+  let values = params.map(fn(p) { p.to_value() })
+  let param_count = values.length()
+  let result = pg_execute_internal(
+    self,
+    string_to_c_bytes(sql),
+    values,
+    param_count,
+  )
   if pg_result_is_null(result) > 0 {
     let err = pg_error_message(self)
     Err(PgError::QueryError(err))
@@ -171,11 +202,12 @@ pub fn Connection::prepare(
 }
 
 ///|
-pub fn PreparedStatement::execute(
+pub fn[T : ToValue] PreparedStatement::execute(
   self : PreparedStatement,
-  params : Array[Value],
+  params : Array[T],
 ) -> Result[QueryResult, PgError] {
-  let result = pg_execute_prepared_internal(self, params)
+  let values = params.map(fn(p) { p.to_value() })
+  let result = pg_execute_prepared_internal(self, values)
   if pg_result_is_null(result) > 0 {
     let err = pg_statement_error(self)
     Err(PgError::QueryError(err))

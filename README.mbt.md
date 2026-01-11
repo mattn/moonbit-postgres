@@ -28,9 +28,16 @@ Add to your `moon.pkg.json`:
     {
       "path": "mattn/postgres"
     }
-  ]
+  ],
+  "link": {
+    "native": {
+      "cc-link-flags": "-lpq"
+    }
+  }
 }
 ```
+
+**Important**: The `link` section is required to link against libpq. For executable packages (like `cmd/main`), add this configuration to the package's `moon.pkg.json`.
 
 ## Quick Start
 
@@ -43,10 +50,10 @@ fn main {
   let rows = result.rows()
   result.free()
   
-  // Parameterized query
+  // Parameterized query with ToValue trait
   let result2 = conn.execute(
     "SELECT * FROM users WHERE id = $1",
-    [mattn/postgres::from_int(42)]
+    [42]
   )?
   result2.free()
   
@@ -66,9 +73,9 @@ Connect to PostgreSQL. Format: `postgresql://user:password@host:port/database`
 
 Execute a query without parameters.
 
-#### `Connection::execute(sql: String, params: Array[Value]) -> Result[QueryResult, PgError]`
+#### `Connection::execute[T : ToValue](sql: String, params: Array[T]) -> Result[QueryResult, PgError]`
 
-Execute a query with parameters using `$1`, `$2`, etc.
+Execute a query with parameters using `$1`, `$2`, etc. The `ToValue` trait allows you to pass values directly (e.g., `[42, "hello", true]`) or use explicit conversion functions.
 
 #### `Connection::prepare(name: String, sql: String) -> Result[PreparedStatement, PgError]`
 
@@ -98,9 +105,9 @@ Free result memory.
 
 ### PreparedStatement
 
-#### `PreparedStatement::execute(params: Array[Value]) -> Result[QueryResult, PgError]`
+#### `PreparedStatement::execute[T : ToValue](params: Array[T]) -> Result[QueryResult, PgError]`
 
-Execute with parameters.
+Execute with parameters. The `ToValue` trait allows you to pass values directly.
 
 #### `PreparedStatement::close() -> Unit`
 
@@ -108,12 +115,18 @@ Close the statement.
 
 ### Value Creation
 
-Use these functions to create parameter values:
+The library provides a `ToValue` trait that allows you to pass values directly:
 
 ```moonbit
-@postgres::from_int(42)
-@postgres::from_string("hello")
-@postgres::from_bool(true)
+conn.execute("SELECT * FROM users WHERE id = $1", [42])?
+conn.execute("SELECT * FROM users WHERE name = $1", ["Alice"])?
+conn.execute("SELECT * FROM users WHERE active = $1", [true])?
+
+// Mixed types
+conn.execute(
+  "INSERT INTO users (id, name, active) VALUES ($1, $2, $3)",
+  [42, "Alice", true]
+)?
 ```
 
 For other value types, use direct construction where available:
@@ -162,9 +175,10 @@ fn main {
 ```moonbit
 fn main {
   let conn = mattn/postgres::connect("postgresql://localhost/mydb")?
+  // Direct value passing with ToValue trait
   let result = conn.execute(
     "SELECT * FROM users WHERE id = $1 AND active = $2",
-    [mattn/postgres::from_int(42), mattn/postgres::from_bool(true)]
+    [42, true]
   )?
   result.free()
   conn.close()
@@ -178,7 +192,7 @@ fn main {
   let conn = mattn/postgres::connect("postgresql://localhost/mydb")?
   let stmt = conn.prepare("get_user", "SELECT * FROM users WHERE id = $1")?
   for i = 1; i <= 100; i = i + 1 {
-    let result = stmt.execute([mattn/postgres::from_int(i)])?
+    let result = stmt.execute([i])?
     result.free()
   }
   stmt.close()
@@ -193,7 +207,7 @@ fn main {
   let conn = mattn/postgres::connect("postgresql://localhost/mydb")?
   let result = conn.execute(
     "UPDATE users SET active = $1 WHERE id = $2",
-    [mattn/postgres::from_bool(false), mattn/postgres::from_int(123)]
+    [false, 123]
   )?
   println(result.affected_rows().to_string() + " rows updated")
   result.free()
