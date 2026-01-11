@@ -42,6 +42,21 @@ pub fn PgError::to_string(self : PgError) -> String {
 }
 
 ///|
+pub fn from_int(n : Int) -> Value {
+  Int(n)
+}
+
+///|
+pub fn from_string(s : String) -> Value {
+  String(s)
+}
+
+///|
+pub fn from_bool(b : Bool) -> Value {
+  Bool(b)
+}
+
+///|
 pub fn connect(conninfo : String) -> Result[Connection, PgError] {
   let conn = pg_connect_internal(string_to_c_bytes(conninfo))
   let err = pg_error_message(conn)
@@ -89,7 +104,8 @@ pub fn Connection::execute(
   sql : String,
   params : Array[Value],
 ) -> Result[QueryResult, PgError] {
-  let result = pg_execute_internal(self, string_to_c_bytes(sql), params)
+  let param_count = params.length()
+  let result = pg_execute_internal(self, string_to_c_bytes(sql), params, param_count)
   if pg_result_is_null(result) > 0 {
     let err = pg_error_message(self)
     Err(PgError::QueryError(err))
@@ -189,6 +205,7 @@ extern "C" fn pg_execute_internal(
   conn : Connection,
   sql : Bytes,
   params : Array[Value],
+  param_count : Int,
 ) -> QueryResult = "pg_execute_internal"
 
 ///|

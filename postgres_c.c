@@ -294,15 +294,17 @@ moonbit_string_t pg_get_env(void *name_bytes, int name_len) {
   return result;
 }
 
-void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, void *param_array, int param_count) {
+void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, int param_count, void *param_array) {
   Connection *connection = (Connection *)conn_ptr;
+  
   char **param_values = malloc(param_count * sizeof(char *));
   int *param_lengths = malloc(param_count * sizeof(int));
   int *param_formats = malloc(param_count * sizeof(int));
 
   for (int i = 0; i < param_count; i++) {
-    void *param_val = ((void **)param_array)[i];
-    uint8_t tag = ((uint8_t *)param_val)[0];
+    // MoonBit Value enum: access array of Value structs
+    unsigned char *value_ptr = ((unsigned char *)param_array) + (i * 16);
+    uint8_t tag = value_ptr[0];
 
     switch (tag) {
       case 0: { // Null
@@ -312,7 +314,7 @@ void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, void *pa
         break;
       }
       case 1: { // Bool
-        uint8_t b = ((uint8_t *)param_val)[1];
+        uint8_t b = value_ptr[1];
         if (b) {
           param_values[i] = "t";
           param_lengths[i] = 1;
@@ -324,7 +326,7 @@ void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, void *pa
         break;
       }
       case 2: { // Int
-        int n = *(int *)((char *)param_val + 1);
+        int n = *(int *)(value_ptr + 1);
         char buf[32];
         int len = snprintf(buf, sizeof(buf), "%d", n);
         param_values[i] = strdup(buf);
@@ -333,7 +335,7 @@ void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, void *pa
         break;
       }
       case 3: { // Int64
-        long long n = *(long long *)((char *)param_val + 1);
+        long long n = *(long long *)(value_ptr + 1);
         char buf[64];
         int len = snprintf(buf, sizeof(buf), "%lld", n);
         param_values[i] = strdup(buf);
@@ -342,7 +344,7 @@ void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, void *pa
         break;
       }
       case 4: { // Float
-        double f = *(double *)((char *)param_val + 1);
+        double f = *(double *)(value_ptr + 1);
         char buf[64];
         int len = snprintf(buf, sizeof(buf), "%f", f);
         param_values[i] = strdup(buf);
@@ -351,8 +353,8 @@ void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, void *pa
         break;
       }
       case 5: { // String
-        int16_t len = *(int16_t *)((char *)param_val + 1);
-        char *str = (char *)((char *)param_val + 1 + 2);
+        int16_t len = *(int16_t *)(value_ptr + 1);
+        char *str = (char *)(value_ptr + 1 + 2);
         param_values[i] = malloc(len + 1);
         for (int j = 0; j < len; j++) {
           ((char *)param_values[i])[j] = str[j];
@@ -363,8 +365,8 @@ void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, void *pa
         break;
       }
       case 6: { // Bytes
-        int16_t len = *(int16_t *)((char *)param_val + 1);
-        char *bytes = (char *)((char *)param_val + 1 + 2);
+        int16_t len = *(int16_t *)(value_ptr + 1);
+        char *bytes = (char *)(value_ptr + 1 + 2);
         param_values[i] = malloc(len);
         memcpy(param_values[i], bytes, len);
         param_lengths[i] = len;
