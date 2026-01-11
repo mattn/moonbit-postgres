@@ -2,80 +2,10 @@
 package "mattn/postgres"
 
 // Values
-pub fn affected_rows(QueryResult) -> Int
-
-pub fn close_statement(PreparedStatement) -> Unit
-
-pub fn connect(String) -> Result[Connection, PgError]
-
-pub fn execute(Connection, String, Array[Value]) -> Result[QueryResult, PgError]
-
-pub fn execute_and_fetch(Connection, String, Array[Value]) -> Result[Array[Array[String]], PgError]
-
-pub fn execute_prepared(PreparedStatement, Array[Value]) -> Result[QueryResult, PgError]
-
-pub fn execute_prepared_and_fetch(PreparedStatement, Array[Value]) -> Result[Array[Array[String]], PgError]
-
-pub fn pg_connect(String) -> Result[Connection, PgError]
-
-pub fn prepare(Connection, String, String) -> Result[PreparedStatement, PgError]
-
-pub fn query(Connection, String) -> Result[QueryResult, PgError]
-
-pub fn query_and_fetch(Connection, String) -> Result[Array[Array[String]], PgError]
-
-// Types and methods
-pub fn Connection::close(self : Connection) -> Unit
-
-pub fn Connection::execute(self : Connection, String, Array[Value]) -> Result[QueryResult, PgError]
-
-pub fn Connection::prepare(self : Connection, String, String) -> Result[PreparedStatement, PgError]
-
-pub fn Connection::query(self : Connection, String) -> Result[QueryResult, PgError]
-
-pub fn Connection::execute_and_fetch(self : Connection, String, Array[Value]) -> Result[Array[Array[String]], PgError]
-
-pub fn Connection::query_and_fetch(self : Connection, String) -> Result[Array[Array[String]], PgError]
-
-pub fn PreparedStatement::close(self : PreparedStatement) -> Unit
-
-pub fn PreparedStatement::execute(self : PreparedStatement, Array[Value]) -> Result[QueryResult, PgError]
-
-pub fn PreparedStatement::execute_and_fetch(self : PreparedStatement, Array[Value]) -> Result[Array[Array[String]], PgError]
-
-pub fn QueryResult::affected_rows(self : QueryResult) -> Int
-
-pub fn QueryResult::columns(self : QueryResult) -> Array[String]
-
-pub fn QueryResult::free(self : QueryResult) -> Unit
-
-pub fn QueryResult::rows(self : QueryResult) -> Array[Array[String]]
 
 // Errors
 
 // Types and methods
-type Connection
-
-type PreparedStatement
-
-pub enum PgError {
-  ConnectionError(String)
-  AuthError(String)
-  QueryError(String)
-  ProtocolError(String)
-}
-
-pub enum Value {
-  Null
-  Bool(Bool)
-  Int(Int)
-  Int64(Int64)
-  Float(Float)
-  String(String)
-  Bytes(Bytes)
-}
-
-type QueryResult
 
 // Type aliases
 

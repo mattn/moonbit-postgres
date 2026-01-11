@@ -11,17 +11,37 @@ A PostgreSQL client library for MoonBit using libpq.
 
 ## Usage
 
-Add `cc-link-flags: "-lpq"` to your `moon.pkg.json`:
+### 1. Import the Package
+
+Simply add the dependency to your `moon.pkg.json`:
 
 ```json
 {
-  "link": {
-    "native": {
-      "cc-link-flags": "-lpq"
+  "is-main": true,
+  "import": [
+    {
+      "path": "mattn/postgres",
+      "alias": "postgres"
     }
+  ],
+  "supported-targets": ["native"],
+  "targets": {
+    "main.mbt": ["native"]
   }
 }
 ```
+
+**Note**: Starting from v0.8.3, the PostgreSQL `libpq` library linking is automatically configured through the pre-build script. If you're using an older version, you may need to explicitly add:
+
+```json
+"link": {
+  "native": {
+    "cc-link-flags": "-lpq"
+  }
+}
+```
+
+### 2. Use the Library
 
 ```moonbit
 use postgres
