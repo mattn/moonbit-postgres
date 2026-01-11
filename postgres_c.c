@@ -272,6 +272,24 @@ int32_t pg_statement_is_null(void *stmt_ptr) {
   return stmt_ptr == NULL;
 }
 
+moonbit_string_t pg_get_env(void *name_bytes) {
+  // name_bytes is a Bytes object containing C-string (null-terminated)
+  const char *name = (const char *)name_bytes;
+  
+  const char *value = getenv(name);
+  
+  if (!value) {
+    return moonbit_make_string(0, 0);
+  }
+  
+  int value_len = strlen(value);
+  moonbit_string_t result = moonbit_make_string_raw(value_len);
+  for (int i = 0; i < value_len; i++) {
+    result[i] = (uint16_t)value[i];
+  }
+  return result;
+}
+
 void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, void *param_array, int param_count) {
   Connection *connection = (Connection *)conn_ptr;
   char **param_values = malloc(param_count * sizeof(char *));
