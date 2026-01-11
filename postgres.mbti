@@ -1,0 +1,53 @@
+package mattn/postgres
+
+// External types
+type Connection
+type QueryResult
+type PreparedStatement
+
+// Public enums
+pub enum Value {
+  Null
+  Bool(Bool)
+  Int(Int)
+  Int64(Int64)
+  Float(Float)
+  String(String)
+  Bytes(Bytes)
+}
+
+pub enum PgError {
+  ConnectionError(String)
+  AuthError(String)
+  QueryError(String)
+  ProtocolError(String)
+}
+
+// Traits
+pub trait ToValue {
+  to_value(Self) -> Value
+}
+
+pub impl ToValue for Int
+pub impl ToValue for String
+pub impl ToValue for Bool
+pub impl ToValue for Int64
+pub impl ToValue for Float
+pub impl ToValue for Bytes
+pub impl ToValue for Value
+
+// Public functions
+pub fn connect(String) -> Result[Connection, PgError]
+
+// Public methods
+pub fn PgError::to_string(PgError) -> String
+pub fn Connection::query(Connection, String) -> Result[QueryResult, PgError]
+pub fn[T : ToValue] Connection::execute(Connection, String, Array[T]) -> Result[QueryResult, PgError]
+pub fn Connection::prepare(Connection, String, String) -> Result[PreparedStatement, PgError]
+pub fn Connection::close(Connection) -> Unit
+pub fn QueryResult::rows(QueryResult) -> Array[Array[String]]
+pub fn QueryResult::columns(QueryResult) -> Array[String]
+pub fn QueryResult::affected_rows(QueryResult) -> Int
+pub fn QueryResult::free(QueryResult) -> Unit
+pub fn[T : ToValue] PreparedStatement::execute(PreparedStatement, Array[T]) -> Result[QueryResult, PgError]
+pub fn PreparedStatement::close(PreparedStatement) -> Unit
