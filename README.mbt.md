@@ -26,8 +26,7 @@ Add to your `moon.pkg.json`:
 {
   "import": [
     {
-      "path": "mattn/postgres",
-      "alias": "postgres"
+      "path": "mattn/postgres"
     }
   ]
 }
@@ -36,10 +35,8 @@ Add to your `moon.pkg.json`:
 ## Quick Start
 
 ```moonbit
-use postgres
-
 fn main {
-  let conn = postgres::connect("postgresql://user:password@localhost/dbname")?
+  let conn = mattn/postgres::connect("postgresql://user:password@localhost/dbname")?
   
   // Simple query
   let result = conn.query("SELECT * FROM users")?
@@ -47,11 +44,11 @@ fn main {
   result.free()
   
   // Parameterized query
-  let result = conn.execute(
+  let result2 = conn.execute(
     "SELECT * FROM users WHERE id = $1",
-    [@postgres.Value::Int(123)]
+    [mattn/postgres::from_int(42)]
   )?
-  result.free()
+  result2.free()
   
   conn.close()
 }
@@ -109,22 +106,21 @@ Execute with parameters.
 
 Close the statement.
 
-### Value Types
+### Value Creation
+
+Use these functions to create parameter values:
 
 ```moonbit
-@postgres.Value::Null
-@postgres.Value::Bool(true)
-@postgres.Value::Int(123)
-@postgres.Value::Int64(123L)
-@postgres.Value::Float(1.5)
-@postgres.Value::String("hello")
-@postgres.Value::Bytes(bytes)
+@postgres::from_int(42)
+@postgres::from_string("hello")
+@postgres::from_bool(true)
 ```
 
-Helper functions:
-- `from_int(Int) -> Value`
-- `from_string(String) -> Value`
-- `from_bool(Bool) -> Value`
+For other value types, use direct construction where available:
+- `Null`
+- `Int64(123L)`
+- `Float(1.5)`
+- `Bytes(data)`
 
 ### Error Handling
 
@@ -150,56 +146,72 @@ Get environment variable (returns empty string if not found).
 ### SELECT
 
 ```moonbit
-let conn = postgres::connect("postgresql://localhost/mydb")?
-let result = conn.query("SELECT id, name FROM users")?
-for row in result.rows() {
-  println(row[0] + ": " + row[1])
+fn main {
+  let conn = mattn/postgres::connect("postgresql://localhost/mydb")?
+  let result = conn.query("SELECT id, name FROM users")?
+  for row in result.rows() {
+    println(row[0] + ": " + row[1])
+  }
+  result.free()
+  conn.close()
 }
-result.free()
-conn.close()
 ```
 
 ### Parameterized Query
 
 ```moonbit
-let result = conn.execute(
-  "SELECT * FROM users WHERE id = $1 AND active = $2",
-  [@postgres.Value::Int(42), @postgres.Value::Bool(true)]
-)?
-result.free()
+fn main {
+  let conn = mattn/postgres::connect("postgresql://localhost/mydb")?
+  let result = conn.execute(
+    "SELECT * FROM users WHERE id = $1 AND active = $2",
+    [mattn/postgres::from_int(42), mattn/postgres::from_bool(true)]
+  )?
+  result.free()
+  conn.close()
+}
 ```
 
 ### Prepared Statements
 
 ```moonbit
-let stmt = conn.prepare("get_user", "SELECT * FROM users WHERE id = $1")?
-for i = 1; i <= 100; i = i + 1 {
-  let result = stmt.execute([@postgres.Value::Int(i)])?
-  // Process result...
-  result.free()
+fn main {
+  let conn = mattn/postgres::connect("postgresql://localhost/mydb")?
+  let stmt = conn.prepare("get_user", "SELECT * FROM users WHERE id = $1")?
+  for i = 1; i <= 100; i = i + 1 {
+    let result = stmt.execute([mattn/postgres::from_int(i)])?
+    result.free()
+  }
+  stmt.close()
+  conn.close()
 }
-stmt.close()
 ```
 
 ### INSERT/UPDATE/DELETE
 
 ```moonbit
-let result = conn.execute(
-  "UPDATE users SET active = $1 WHERE id = $2",
-  [@postgres.Value::Bool(false), @postgres.Value::Int(123)]
-)?
-println(result.affected_rows().to_string() + " rows updated")
-result.free()
+fn main {
+  let conn = mattn/postgres::connect("postgresql://localhost/mydb")?
+  let result = conn.execute(
+    "UPDATE users SET active = $1 WHERE id = $2",
+    [mattn/postgres::from_bool(false), mattn/postgres::from_int(123)]
+  )?
+  println(result.affected_rows().to_string() + " rows updated")
+  result.free()
+  conn.close()
+}
 ```
 
 ### Environment Variables
 
 ```moonbit
-let host = @postgres.pg_get_env("DB_HOST")
-let user = @postgres.pg_get_env("DB_USER")
-let password = @postgres.pg_get_env("DB_PASSWORD")
-let conninfo = "postgresql://" + user + ":" + password + "@" + host
-let conn = postgres::connect(conninfo)?
+fn main {
+  let host = mattn/postgres::pg_get_env("DB_HOST")
+  let user = mattn/postgres::pg_get_env("DB_USER")
+  let password = mattn/postgres::pg_get_env("DB_PASSWORD")
+  let conninfo = "postgresql://" + user + ":" + password + "@" + host
+  let conn = mattn/postgres::connect(conninfo)?
+  conn.close()
+}
 ```
 
 ## License
