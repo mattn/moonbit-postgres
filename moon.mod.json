@@ -1,6 +1,6 @@
 {
   "name": "mattn/postgres",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "readme": "README.mbt.md",
   "repository": "https://github.com/mattn/moonbit-postgres",
   "license": "MIT",

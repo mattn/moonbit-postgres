@@ -115,9 +115,10 @@ Close the statement.
 
 ### Value Creation
 
-The library provides a `ToValue` trait that allows you to pass values directly:
+The library provides a `ToValue` trait that allows you to pass values directly without wrapping them:
 
 ```moonbit
+// Direct values - recommended
 conn.execute("SELECT * FROM users WHERE id = $1", [42])?
 conn.execute("SELECT * FROM users WHERE name = $1", ["Alice"])?
 conn.execute("SELECT * FROM users WHERE active = $1", [true])?
@@ -129,11 +130,20 @@ conn.execute(
 )?
 ```
 
-For other value types, use direct construction where available:
-- `Null`
-- `Int64(123L)`
-- `Float(1.5)`
-- `Bytes(data)`
+Supported types that implement `ToValue`:
+- `Int` → `Value::Int`
+- `String` → `Value::String`
+- `Bool` → `Value::Bool`
+- `Int64` → `Value::Int64`
+- `Float` → `Value::Float`
+- `Bytes` → `Value::Bytes`
+- `Value` → `Value` (passthrough)
+
+For special cases, you can still use explicit `Value` constructors:
+- `Value::Null` - for NULL values
+- `Value::Int64(123L)` - explicit Int64
+- `Value::Float(1.5)` - explicit Float
+- `Value::Bytes(data)` - binary data
 
 ### Error Handling
 
