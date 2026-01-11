@@ -245,8 +245,9 @@ extern "C" fn pg_statement_is_null(stmt : PreparedStatement) -> Int = "pg_statem
 
 ///|
 pub fn pg_get_env(name : String) -> String {
-  pg_get_env_internal(string_to_c_bytes(name))
+  let name_bytes = string_to_c_bytes(name)
+  pg_get_env_internal(name_bytes, name_bytes.length())
 }
 
 ///|
-extern "C" fn pg_get_env_internal(name : Bytes) -> String = "pg_get_env"
+extern "C" fn pg_get_env_internal(name : Bytes, len : Int) -> String = "pg_get_env"

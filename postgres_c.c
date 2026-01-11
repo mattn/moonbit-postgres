@@ -272,11 +272,15 @@ int32_t pg_statement_is_null(void *stmt_ptr) {
   return stmt_ptr == NULL;
 }
 
-moonbit_string_t pg_get_env(void *name_bytes) {
-  // name_bytes is a Bytes object containing C-string (null-terminated)
-  const char *name = (const char *)name_bytes;
+moonbit_string_t pg_get_env(void *name_bytes, int name_len) {
+  // Bytes in MoonBit is a pointer to byte array data
+  unsigned char *bytes = (unsigned char *)name_bytes;
+  if (!bytes) {
+    return moonbit_make_string(0, 0);
+  }
   
-  const char *value = getenv(name);
+  // string_to_c_bytes adds null terminator, so we can use it directly
+  const char *value = getenv((const char *)bytes);
   
   if (!value) {
     return moonbit_make_string(0, 0);
