@@ -94,16 +94,16 @@ pub fn connect(conninfo : String) -> Result[Connection, PgError] {
 }
 
 ///|
+/// Encode a MoonBit string as a null-terminated UTF-8 byte sequence for
+/// passing to libpq. The previous implementation wrote raw UCS-2 code units,
+/// which produced invalid UTF-8 for any non-ASCII character (e.g. "り"
+/// U+308A became 30 8A where UTF-8 is E3 82 8A), causing PostgreSQL to
+/// reject the query with "invalid byte sequence for encoding UTF8".
 fn string_to_c_bytes(s : String) -> Bytes {
-  let arr = Array::make(0, (0 : Byte))
-  for i = 0; i < s.length(); i = i + 1 {
-    let c = s[i]
-    let hi = (c >> 8).to_byte()
-    let lo = c.to_byte()
-    if hi != (0 : Byte) {
-      arr.push(hi)
-    }
-    arr.push(lo)
+  let utf8 = @utf8.encode(s[:])
+  let arr : Array[Byte] = []
+  for b in utf8 {
+    arr.push(b)
   }
   arr.push((0 : Byte))
   Bytes::from_array(arr)
