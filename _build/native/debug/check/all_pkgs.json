@@ -3,7 +3,7 @@
     {
       "root": "mattn/postgres",
       "rel": "",
-      "artifact": "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/_build/native/debug/check/postgres.mi"
+      "artifact": "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pgpub/_build/native/debug/check/postgres.mi"
     },
     {
       "root": "moonbitlang/core",
