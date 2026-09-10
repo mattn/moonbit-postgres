@@ -6,7 +6,7 @@ type QueryResult
 type PreparedStatement
 
 // Public enums
-pub enum Value {
+pub(all) enum Value {
   Null
   Bool(Bool)
   Int(Int)

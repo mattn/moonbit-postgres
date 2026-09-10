@@ -40,7 +40,58 @@ void* pg_query_internal(void *conn_ptr, const char *sql, int len) {
   return query_result;
 }
 
-void* pg_prepare_internal(void *conn_ptr, const char *name, int name_len, const char *sql, int sql_len) {
+// The MoonBit side hands us the parameters already encoded: `values[i]` is the
+// raw bytes, `lengths[i]` its length (-1 for a SQL NULL) and `formats[i]` is 0
+// for text or 1 for binary. Nothing here owns the bytes, so nothing frees them.
+typedef struct {
+  const char **values;
+  int *lengths;
+  int *formats;
+} ParamArrays;
+
+static int build_params(ParamArrays *out, uint8_t **values, int32_t *lengths,
+                        int32_t *formats, int n) {
+  out->values = malloc(n * sizeof(char *));
+  out->lengths = malloc(n * sizeof(int));
+  out->formats = malloc(n * sizeof(int));
+  if (n > 0 && (!out->values || !out->lengths || !out->formats)) {
+    free((void *)out->values);
+    free(out->lengths);
+    free(out->formats);
+    return 0;
+  }
+  for (int i = 0; i < n; i++) {
+    if (lengths[i] < 0) {
+      out->values[i] = NULL;
+      out->lengths[i] = 0;
+      out->formats[i] = 0;
+    } else {
+      out->values[i] = (const char *)values[i];
+      out->lengths[i] = lengths[i];
+      out->formats[i] = formats[i];
+    }
+  }
+  return 1;
+}
+
+static void free_params(ParamArrays *p) {
+  free((void *)p->values);
+  free(p->lengths);
+  free(p->formats);
+}
+
+static void* wrap_result(PGresult *result) {
+  ExecStatusType status = PQresultStatus(result);
+  if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK) {
+    PQclear(result);
+    return NULL;
+  }
+  QueryResult *query_result = malloc(sizeof(QueryResult));
+  query_result->result = result;
+  return query_result;
+}
+
+void* pg_prepare_internal(void *conn_ptr, const char *name, const char *sql) {
   Connection *connection = (Connection *)conn_ptr;
   PGresult *result = PQprepare(connection->conn, name, sql, 0, NULL);
   
@@ -56,113 +107,18 @@ void* pg_prepare_internal(void *conn_ptr, const char *name, int name_len, const 
   return stmt;
 }
 
-void* pg_execute_prepared_internal(void *stmt_ptr, void *params, int param_count) {
+void* pg_execute_prepared_internal(void *stmt_ptr, uint8_t **values,
+                                   int32_t *lengths, int32_t *formats, int32_t n) {
   PreparedStatement *stmt = (PreparedStatement *)stmt_ptr;
-  
-  char **param_values = malloc(param_count * sizeof(char *));
-  int *param_lengths = malloc(param_count * sizeof(int));
-  int *param_formats = malloc(param_count * sizeof(int));
-  
-  for (int i = 0; i < param_count; i++) {
-    void *param_val = ((void **)params)[i];
-    uint8_t tag = ((uint8_t *)param_val)[0];
-    
-    switch (tag) {
-      case 0: { // Null
-        param_values[i] = NULL;
-        param_lengths[i] = 0;
-        param_formats[i] = 1;
-        break;
-      }
-      case 1: { // Bool
-        uint8_t b = ((uint8_t *)param_val)[1];
-        if (b) {
-          param_values[i] = "t";
-          param_lengths[i] = 1;
-        } else {
-          param_values[i] = "f";
-          param_lengths[i] = 1;
-        }
-        param_formats[i] = 1;
-        break;
-      }
-      case 2: { // Int
-        int n = *(int *)((char *)param_val + 1);
-        char buf[32];
-        int len = snprintf(buf, sizeof(buf), "%d", n);
-        param_values[i] = strdup(buf);
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      case 3: { // Int64
-        long long n = *(long long *)((char *)param_val + 1);
-        char buf[64];
-        int len = snprintf(buf, sizeof(buf), "%lld", n);
-        param_values[i] = strdup(buf);
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      case 4: { // Float
-        double f = *(double *)((char *)param_val + 1);
-        char buf[64];
-        int len = snprintf(buf, sizeof(buf), "%f", f);
-        param_values[i] = strdup(buf);
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      case 5: { // String
-        int16_t len = *(int16_t *)((char *)param_val + 1);
-        char *str = (char *)((char *)param_val + 1 + 2);
-        param_values[i] = malloc(len + 1);
-        for (int j = 0; j < len; j++) {
-          ((char *)param_values[i])[j] = str[j];
-        }
-        ((char *)param_values[i])[len] = '\0';
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      case 6: { // Bytes
-        int16_t len = *(int16_t *)((char *)param_val + 1);
-        char *bytes = (char *)((char *)param_val + 1 + 2);
-        param_values[i] = malloc(len);
-        memcpy(param_values[i], bytes, len);
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      default:
-        param_values[i] = NULL;
-        param_lengths[i] = 0;
-        param_formats[i] = 1;
-        break;
-      }
-      }
-      
-      PGresult *result = PQexecPrepared(stmt->conn, stmt->name, param_count, (const char * const *)param_values, param_lengths, param_formats, 1);
-  
-  for (int i = 0; i < param_count; i++) {
-    if (param_values[i]) {
-      free(param_values[i]);
-    }
-  }
-  free(param_values);
-  free(param_lengths);
-  free(param_formats);
-  
-  ExecStatusType status = PQresultStatus(result);
-  
-  if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK) {
-    PQclear(result);
+
+  ParamArrays p;
+  if (!build_params(&p, values, lengths, formats, n)) {
     return NULL;
   }
-  
-  QueryResult *query_result = malloc(sizeof(QueryResult));
-  query_result->result = result;
-  return query_result;
+  PGresult *result = PQexecPrepared(stmt->conn, stmt->name, n, p.values,
+                                    p.lengths, p.formats, 0);
+  free_params(&p);
+  return wrap_result(result);
 }
 
 void pg_close_statement_internal(void *stmt_ptr) {
@@ -294,111 +250,16 @@ moonbit_string_t pg_get_env(void *name_bytes, int name_len) {
   return result;
 }
 
-void* pg_execute_internal(void *conn_ptr, const char *sql, int sql_len, int param_count, void *param_array) {
+void* pg_execute_internal(void *conn_ptr, const char *sql, uint8_t **values,
+                          int32_t *lengths, int32_t *formats, int32_t n) {
   Connection *connection = (Connection *)conn_ptr;
-  
-  char **param_values = malloc(param_count * sizeof(char *));
-  int *param_lengths = malloc(param_count * sizeof(int));
-  int *param_formats = malloc(param_count * sizeof(int));
 
-  for (int i = 0; i < param_count; i++) {
-    // MoonBit Value enum: access array of Value structs
-    unsigned char *value_ptr = ((unsigned char *)param_array) + (i * 16);
-    uint8_t tag = value_ptr[0];
-
-    switch (tag) {
-      case 0: { // Null
-        param_values[i] = NULL;
-        param_lengths[i] = 0;
-        param_formats[i] = 1;
-        break;
-      }
-      case 1: { // Bool
-        uint8_t b = value_ptr[1];
-        if (b) {
-          param_values[i] = "t";
-          param_lengths[i] = 1;
-        } else {
-          param_values[i] = "f";
-          param_lengths[i] = 1;
-        }
-        param_formats[i] = 1;
-        break;
-      }
-      case 2: { // Int
-        int n = *(int *)(value_ptr + 1);
-        char buf[32];
-        int len = snprintf(buf, sizeof(buf), "%d", n);
-        param_values[i] = strdup(buf);
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      case 3: { // Int64
-        long long n = *(long long *)(value_ptr + 1);
-        char buf[64];
-        int len = snprintf(buf, sizeof(buf), "%lld", n);
-        param_values[i] = strdup(buf);
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      case 4: { // Float
-        double f = *(double *)(value_ptr + 1);
-        char buf[64];
-        int len = snprintf(buf, sizeof(buf), "%f", f);
-        param_values[i] = strdup(buf);
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      case 5: { // String
-        int16_t len = *(int16_t *)(value_ptr + 1);
-        char *str = (char *)(value_ptr + 1 + 2);
-        param_values[i] = malloc(len + 1);
-        for (int j = 0; j < len; j++) {
-          ((char *)param_values[i])[j] = str[j];
-        }
-        ((char *)param_values[i])[len] = '\0';
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      case 6: { // Bytes
-        int16_t len = *(int16_t *)(value_ptr + 1);
-        char *bytes = (char *)(value_ptr + 1 + 2);
-        param_values[i] = malloc(len);
-        memcpy(param_values[i], bytes, len);
-        param_lengths[i] = len;
-        param_formats[i] = 1;
-        break;
-      }
-      default:
-        param_values[i] = NULL;
-        param_lengths[i] = 0;
-        param_formats[i] = 1;
-    }
-  }
-
-  PGresult *result = PQexecParams(connection->conn, sql, param_count, NULL, (const char * const *)param_values, param_lengths, param_formats, 1);
-
-  for (int i = 0; i < param_count; i++) {
-    if (param_values[i]) {
-      free(param_values[i]);
-    }
-  }
-  free(param_values);
-  free(param_lengths);
-  free(param_formats);
-
-  ExecStatusType status = PQresultStatus(result);
-
-  if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK) {
-    PQclear(result);
+  ParamArrays p;
+  if (!build_params(&p, values, lengths, formats, n)) {
     return NULL;
   }
-
-  QueryResult *query_result = malloc(sizeof(QueryResult));
-  query_result->result = result;
-  return query_result;
+  PGresult *result = PQexecParams(connection->conn, sql, n, NULL, p.values,
+                                  p.lengths, p.formats, 0);
+  free_params(&p);
+  return wrap_result(result);
 }

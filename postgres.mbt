@@ -13,7 +13,7 @@ type PreparedStatement
 ///|
 
 ///|
-pub enum Value {
+pub(all) enum Value {
   Null
   Bool(Bool)
   Int(Int)
@@ -82,6 +82,40 @@ pub impl ToValue for Value with to_value(v) {
 }
 
 ///|
+/// Marshals bound parameters into the three plain arrays libpq wants, so the
+/// C side never has to know how MoonBit lays out `Value` in memory.
+///
+/// A length of -1 marks a SQL NULL; the format is 0 for text and 1 for the
+/// binary representation, which only `Bytes` uses.
+fn[T : ToValue] encode_params(
+  params : Array[T],
+) -> (FixedArray[Bytes], FixedArray[Int], FixedArray[Int]) {
+  let n = params.length()
+  let values = FixedArray::make(n, b"")
+  let lengths = FixedArray::make(n, -1)
+  let formats = FixedArray::make(n, 0)
+  for i = 0; i < n; i = i + 1 {
+    let text = match params[i].to_value() {
+      Null => continue
+      Bool(b) => if b { b"t" } else { b"f" }
+      Int(v) => @utf8.encode(v.to_string())
+      Int64(v) => @utf8.encode(v.to_string())
+      Float(v) => @utf8.encode(v.to_string())
+      String(v) => @utf8.encode(v)
+      Bytes(v) => {
+        values[i] = v
+        lengths[i] = v.length()
+        formats[i] = 1
+        continue
+      }
+    }
+    values[i] = text
+    lengths[i] = text.length()
+  }
+  (values, lengths, formats)
+}
+
+///|
 pub fn connect(conninfo : String) -> Result[Connection, PgError] {
   let conn = pg_connect_internal(string_to_c_bytes(conninfo))
   let err = pg_error_message(conn)
@@ -129,13 +163,14 @@ pub fn[T : ToValue] Connection::execute(
   sql : String,
   params : Array[T],
 ) -> Result[QueryResult, PgError] {
-  let values = params.map(fn(p) { p.to_value() })
-  let param_count = values.length()
+  let (values, lengths, formats) = encode_params(params)
   let result = pg_execute_internal(
     self,
     string_to_c_bytes(sql),
     values,
-    param_count,
+    lengths,
+    formats,
+    lengths.length(),
   )
   if pg_result_is_null(result) > 0 {
     let err = pg_error_message(self)
@@ -206,8 +241,14 @@ pub fn[T : ToValue] PreparedStatement::execute(
   self : PreparedStatement,
   params : Array[T],
 ) -> Result[QueryResult, PgError] {
-  let values = params.map(fn(p) { p.to_value() })
-  let result = pg_execute_prepared_internal(self, values)
+  let (values, lengths, formats) = encode_params(params)
+  let result = pg_execute_prepared_internal(
+    self,
+    values,
+    lengths,
+    formats,
+    lengths.length(),
+  )
   if pg_result_is_null(result) > 0 {
     let err = pg_statement_error(self)
     Err(PgError::QueryError(err))
@@ -235,11 +276,13 @@ extern "C" fn pg_connect_internal(conninfo : Bytes) -> Connection = "pg_connect_
 extern "C" fn pg_query_internal(conn : Connection, sql : Bytes) -> QueryResult = "pg_query_internal"
 
 ///|
-#borrow(sql, params)
+#borrow(sql, values, lengths, formats)
 extern "C" fn pg_execute_internal(
   conn : Connection,
   sql : Bytes,
-  params : Array[Value],
+  values : FixedArray[Bytes],
+  lengths : FixedArray[Int],
+  formats : FixedArray[Int],
   param_count : Int,
 ) -> QueryResult = "pg_execute_internal"
 
@@ -252,10 +295,13 @@ extern "C" fn pg_prepare_internal(
 ) -> PreparedStatement = "pg_prepare_internal"
 
 ///|
-#borrow(params)
+#borrow(values, lengths, formats)
 extern "C" fn pg_execute_prepared_internal(
   stmt : PreparedStatement,
-  params : Array[Value],
+  values : FixedArray[Bytes],
+  lengths : FixedArray[Int],
+  formats : FixedArray[Int],
+  param_count : Int,
 ) -> QueryResult = "pg_execute_prepared_internal"
 
 ///|
