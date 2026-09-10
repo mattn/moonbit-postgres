@@ -227,12 +227,15 @@ pub fn Connection::close(self : Connection) -> Unit {
 }
 
 ///|
+#borrow(conninfo)
 extern "C" fn pg_connect_internal(conninfo : Bytes) -> Connection = "pg_connect_internal"
 
 ///|
+#borrow(sql)
 extern "C" fn pg_query_internal(conn : Connection, sql : Bytes) -> QueryResult = "pg_query_internal"
 
 ///|
+#borrow(sql, params)
 extern "C" fn pg_execute_internal(
   conn : Connection,
   sql : Bytes,
@@ -241,6 +244,7 @@ extern "C" fn pg_execute_internal(
 ) -> QueryResult = "pg_execute_internal"
 
 ///|
+#borrow(name, sql)
 extern "C" fn pg_prepare_internal(
   conn : Connection,
   name : Bytes,
@@ -248,6 +252,7 @@ extern "C" fn pg_prepare_internal(
 ) -> PreparedStatement = "pg_prepare_internal"
 
 ///|
+#borrow(params)
 extern "C" fn pg_execute_prepared_internal(
   stmt : PreparedStatement,
   params : Array[Value],
@@ -299,4 +304,5 @@ pub fn pg_get_env(name : String) -> String {
 }
 
 ///|
+#borrow(name)
 extern "C" fn pg_get_env_internal(name : Bytes, len : Int) -> String = "pg_get_env"
