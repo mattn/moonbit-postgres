@@ -2,12 +2,58 @@
 package "mattn/postgres"
 
 // Values
+pub fn connect(String) -> Result[Connection, PgError]
+
+pub fn pg_get_env(String) -> String
 
 // Errors
 
 // Types and methods
+type Connection
+pub fn Connection::close(Self) -> Unit
+pub fn[T : ToValue] Connection::execute(Self, String, Array[T]) -> Result[QueryResult, PgError]
+pub fn Connection::prepare(Self, String, String) -> Result[PreparedStatement, PgError]
+pub fn Connection::query(Self, String) -> Result[QueryResult, PgError]
+
+pub enum PgError {
+  ConnectionError(String)
+  AuthError(String)
+  QueryError(String)
+  ProtocolError(String)
+}
+pub fn PgError::to_string(Self) -> String
+
+type PreparedStatement
+pub fn PreparedStatement::close(Self) -> Unit
+pub fn[T : ToValue] PreparedStatement::execute(Self, Array[T]) -> Result[QueryResult, PgError]
+
+type QueryResult
+pub fn QueryResult::affected_rows(Self) -> Int
+pub fn QueryResult::columns(Self) -> Array[String]
+pub fn QueryResult::free(Self) -> Unit
+pub fn QueryResult::rows(Self) -> Array[Array[String]]
+
+pub(all) enum Value {
+  Null
+  Bool(Bool)
+  Int(Int)
+  Int64(Int64)
+  Float(Float)
+  String(String)
+  Bytes(Bytes)
+}
+pub impl ToValue for Value
 
 // Type aliases
 
 // Traits
+pub trait ToValue {
+  fn to_value(Self) -> Value
+}
+pub impl ToValue for Bool
+pub impl ToValue for Int
+pub impl ToValue for Int64
+pub impl ToValue for Float
+pub impl ToValue for String
+pub impl ToValue for Bytes
 
