@@ -1,0 +1,121 @@
+{
+  "source_dir": "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg",
+  "name": "mattn/postgres",
+  "packages": [
+    {
+      "is-main": false,
+      "is-third-party": false,
+      "root-path": "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg",
+      "root": "mattn/postgres",
+      "rel": "",
+      "files": {
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/postgres.mbt": {
+          "backend": [
+            "Native"
+          ],
+          "optlevel": [
+            "Release",
+            "Debug"
+          ]
+        }
+      },
+      "wbtest-files": {},
+      "test-files": {},
+      "mbt-md-files": {
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/README.mbt.md": {
+          "backend": [
+            "Wasm",
+            "WasmGC",
+            "Js",
+            "Native",
+            "LLVM"
+          ],
+          "optlevel": [
+            "Release",
+            "Debug"
+          ]
+        }
+      },
+      "deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/mattn/.moon/lib/core/prelude"
+        }
+      ],
+      "wbtest-deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/mattn/.moon/lib/core/prelude"
+        }
+      ],
+      "test-deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/mattn/.moon/lib/core/prelude"
+        }
+      ],
+      "artifact": "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/_build/native/debug/check/postgres.mi",
+      "check-command": [
+        "check",
+        "-error-format",
+        "json",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/postgres.mbt",
+        "-o",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/_build/native/debug/check/postgres.mi",
+        "-pkg",
+        "mattn/postgres",
+        "-std-path",
+        "/home/mattn/.moon/lib/core/_build/native/release/bundle",
+        "-i",
+        "/home/mattn/.moon/lib/core/_build/native/release/bundle/prelude/prelude.mi:prelude",
+        "-pkg-sources",
+        "mattn/postgres:/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg",
+        "-target",
+        "native",
+        "-workspace-path",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg",
+        "-all-pkgs",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/_build/native/debug/check/all_pkgs.json"
+      ],
+      "wbtest-check-command": null,
+      "test-check-command": [
+        "check",
+        "-error-format",
+        "json",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/README.mbt.md",
+        "-doctest-only",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/postgres.mbt",
+        "-include-doctests",
+        "-o",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/_build/native/debug/check/postgres.blackbox_test.mi",
+        "-pkg",
+        "mattn/postgres_blackbox_test",
+        "-std-path",
+        "/home/mattn/.moon/lib/core/_build/native/release/bundle",
+        "-i",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/_build/native/debug/check/postgres.mi:postgres",
+        "-i",
+        "/home/mattn/.moon/lib/core/_build/native/release/bundle/prelude/prelude.mi:prelude",
+        "-pkg-sources",
+        "mattn/postgres_blackbox_test:/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg",
+        "-target",
+        "native",
+        "-blackbox-test",
+        "-workspace-path",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg",
+        "-all-pkgs",
+        "/tmp/claude-1000/-home-mattn-dev-relays/c9036b26-4735-4399-887d-c92b85fec382/scratchpad/wt/pg/_build/native/debug/check/all_pkgs.json"
+      ],
+      "supported-targets": [
+        "Native"
+      ]
+    }
+  ],
+  "deps": [],
+  "backend": "native",
+  "opt_level": "debug",
+  "source": null
+}
