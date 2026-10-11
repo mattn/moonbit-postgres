@@ -2,6 +2,9 @@
   "is-main": false,
   "import": ["moonbitlang/core/encoding/utf8"],
   "supported-targets": ["native"],
+  "import": [
+    { "path": "moonbitlang/core/encoding/utf8", "alias": "utf8" }
+  ],
   "targets": {
     "postgres.mbt": ["native"],
     "postgres_c.c": ["native"]
