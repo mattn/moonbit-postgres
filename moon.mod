@@ -1,0 +1,20 @@
+name = "mattn/postgres"
+
+version = "0.10.7"
+
+readme = "README.mbt.md"
+
+repository = "https://github.com/mattn/moonbit-postgres"
+
+license = "MIT"
+
+keywords = [ "postgresql", "postgres" ]
+
+description = "A PostgreSQL client library for MoonBit using libpq."
+
+preferred_target = "native"
+
+options(
+  targets: [ "native" ],
+  "--moonbit-unstable-prebuild": "build.js",
+)
